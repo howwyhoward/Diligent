@@ -1,0 +1,812 @@
+openapi: '3.0.3'
+info:
+  description: CSE186 Assignment 8 Backend
+  version: 0.1.0
+  title: CSE186 Assignment 8 Backend
+
+servers:
+  - url: http://localhost:3010/v0
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /login:
+    get:
+      summary: User login
+      parameters:
+        - in: query
+          name: identifier
+          schema:
+            type: string
+          required: true
+          description: The user's email or username
+        - in: query
+          name: password
+          schema:
+            type: string
+            format: password
+          required: true
+          description: The user's password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+                  email:
+                    type: string
+                  username:
+                    type: string
+                  last_state:
+                    type: object
+                    properties:
+                      lastWorkspace:
+                        type: string
+                        format: uuid
+                        nullable: true
+                      lastChannel:
+                        type: string
+                        format: uuid
+                        nullable: true
+                      lastMessage:
+                        type: string
+                        format: uuid
+                        nullable: true
+        '400':
+          description: Identifier and password are required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Invalid identifier or password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /save_state:
+    post:
+      summary: Save user's last state
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lastWorkspace:
+                  type: string
+                  format: uuid
+                  nullable: true
+                lastChannel:
+                  type: string
+                  format: uuid
+                  nullable: true
+                lastMessage:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: State saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /validate_token:
+    post:
+      summary: Validate JWT token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  email:
+                    type: string
+                  username:
+                    type: string
+        '401':
+          description: Invalid token
+  /workspaces:
+    get:
+      summary: Get workspaces for user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    created_by:
+                      type: string
+                    description:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+    post:
+      summary: Add a new workspace
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Workspace added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  created_by:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+
+  /channels:
+    get:
+      summary: Get channels for workspace
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: workspaceId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The workspace's ID
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    workspace_id:
+                      type: string
+                      format: uuid
+                    created_by:
+                      type: string
+                    description:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        '403':
+          description: User does not have access to this workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    post:
+      summary: Add a new channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - workspaceId
+              properties:
+                name:
+                  type: string
+                workspaceId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Channel added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  workspace_id:
+                    type: string
+                    format: uuid
+                  created_by:
+                    type: string
+                  description:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '403':
+          description: User does not have permission to add a channel to this workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /channels/{channelId}:
+    get:
+      summary: Get a specific channel by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: channelId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The channel's ID
+      responses:
+        '200':
+          description: The requested channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  workspace_id:
+                    type: string
+                    format: uuid
+                  created_by:
+                    type: string
+                  description:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /messages:
+    get:
+      summary: Get messages for channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: channelId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The channel's ID
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    channel_id:
+                      type: string
+                      format: uuid
+                    user_email:
+                      type: string
+                    username:
+                      type: string
+                    content:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        '403':
+          description: User does not have access to this channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    post:
+      summary: Add a new message to a channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channelId
+                - content
+              properties:
+                channelId:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Message added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  channel_id:
+                    type: string
+                    format: uuid
+                  user_email:
+                    type: string
+                  content:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '403':
+          description: User does not have access to this channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /direct_messages:
+    get:
+      summary: Get direct messages between users
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: otherUserEmail
+          schema:
+            type: string
+          required: true
+          description: The email of the other user
+      responses:
+        '200':
+          description: List of direct messages between users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    sender_email:
+                      type: string
+                    receiver_email:
+                      type: string
+                    content:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    post:
+      summary: Add a new direct message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - receiverEmail
+                - content
+              properties:
+                workspaceId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                receiverEmail:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Direct message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  sender_email:
+                    type: string
+                  receiver_email:
+                    type: string
+                  content:
+                    type: string
+                  workspace_id:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /direct_messages_list:
+    get:
+      summary: Get list of users for direct messages
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of users for direct messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    other_user_email:
+                      type: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /user_workspaces:
+    post:
+      summary: Add a user to a workspace
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userEmail
+                - workspaceId
+              properties:
+                userEmail:
+                  type: string
+                workspaceId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: User added to workspace successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_email:
+                    type: string
+                  workspace_id:
+                    type: string
+                    format: uuid
+        '403':
+          description: Only the workspace owner can add members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '400':
+          description: User to be added does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '409':
+          description: User is already part of the workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /users:
+    get:
+      summary: Get all users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    username:
+                      type: string
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /workspace_members:
+    get:
+      summary: Get members of a workspace
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: workspaceId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The workspace's ID
+      responses:
+        '200':
+          description: List of workspace members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    username:
+                      type: string
+        '403':
+          description: User does not have access to this workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /mentions:
+    get:
+      summary: Get messages where the user was mentioned
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of messages where the user was mentioned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    channel_id:
+                      type: string
+                      format: uuid
+                    user_email:
+                      type: string
+                    content:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /search:
+    get:
+      summary: Search messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: term
+          schema:
+            type: string
+          required: true
+          description: The search term to filter messages
+      responses:
+        '200':
+          description: List of messages matching the search term
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+                    workspace_name:
+                      type: string
+                    channel_name:
+                      type: string
